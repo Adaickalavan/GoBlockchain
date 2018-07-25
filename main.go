@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	_ "github.com/joho/godotenv"
 )
 
 // Block represents a single block in the blockchain
@@ -26,6 +27,8 @@ var Blockchain []Block
 
 func main() {
 	fmt.Println("hi")
+	s,t := os.LookupEnv("ADDR")
+	log.Println(s,t)
 }
 
 func calculateHash(block Block) string {
@@ -63,13 +66,12 @@ func replaceChain(newBlocks []Block) {
 	if len(newBlocks) > len(Blockchain) {
 		Blockchain = newBlocks
 	}
-
 }
 
 func makeMuxRouter() http.Handler {
 	muxRouter := mux.NewRouter()
-	muxRouter.HandleFunc("/", handleGetBlockchain).Methods("GET")
-	muxRouter.HandleFunc("/", handleWriteBlock).Methods("POST")
+	// muxRouter.HandleFunc("/", handleGetBlockchain).Methods("GET")
+	// muxRouter.HandleFunc("/", handleWriteBlock).Methods("POST")
 	return muxRouter
 }
 
@@ -88,6 +90,5 @@ func run() error {
 	if err := s.ListenAndServe(); err != nil {
 		return err
 	}
-
 	return nil
 }
