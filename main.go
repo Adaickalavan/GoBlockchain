@@ -3,14 +3,13 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/gorilla/mux"
-	_ "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 // Block represents a single block in the blockchain
@@ -26,9 +25,13 @@ type Block struct {
 var Blockchain []Block
 
 func main() {
-	fmt.Println("hi")
-	s,t := os.LookupEnv("ADDR")
-	log.Println(s,t)
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	run()
+
 }
 
 func calculateHash(block Block) string {
@@ -78,7 +81,7 @@ func makeMuxRouter() http.Handler {
 func run() error {
 	mux := makeMuxRouter()
 	httpAddr := os.Getenv("ADDR")
-	log.Println("Listening on ", os.Getenv("ADDR"))
+	log.Println("Listening on ", httpAddr)
 	s := &http.Server{
 		Addr:           ":" + httpAddr,
 		Handler:        mux,
@@ -91,4 +94,12 @@ func run() error {
 		return err
 	}
 	return nil
+}
+
+func handleGetBlockChain(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
+	
 }
