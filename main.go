@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -23,6 +25,11 @@ type Block struct {
 
 // Blockchain represents the sequence of blocks forming a blockchain
 var Blockchain []Block
+
+// Message
+type Message struct {
+	BPM int
+}
 
 func main() {
 	err := godotenv.Load()
@@ -97,9 +104,14 @@ func run() error {
 }
 
 func handleGetBlockChain(w http.ResponseWriter, r *http.Request) {
-
+	bytes, err := json.MarshalIndent(Blockchain, "", "  ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	io.WriteString(w, string(bytes))
 }
 
 func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
-	
+
 }
