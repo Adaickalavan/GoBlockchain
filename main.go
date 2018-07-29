@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
@@ -26,7 +27,7 @@ type Block struct {
 // Blockchain represents the sequence of blocks forming a blockchain
 var Blockchain []Block
 
-// Message
+// Message represents the new data being added to the new block in a blockchain
 type Message struct {
 	BPM int
 }
@@ -113,5 +114,30 @@ func handleGetBlockChain(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
+	var m Message
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&m); err != nil {
+		respondWithJSON(w, r, http.StatusBadRequest, r.Body)
+		return
+	}
+	defer r.Body.Close()
+
+	oldBlock := Blockchain[len(Blockchain)-1]
+	newBlock, err := generateBlock(oldBlock, m.BPM)
+	if err != nil {
+		respondWithJSON(w, r, http.StatusInternalServerError, m)
+		return
+	}
+	if isBlockValid(newBlock, oldBlock) {
+		newBockChain := append(Blockchain, newBlock)
+		replaceChain(newBockChain)
+		spew.Dump(Blockchain)
+	}
+
+	respondWithJSON(w, r, http.StatusCreated, newBlock)
+}
+
+func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{}) {
 
 }
