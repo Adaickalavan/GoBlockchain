@@ -11,7 +11,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
@@ -115,6 +114,7 @@ func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	var m Message
 
 	decoder := json.NewDecoder(r.Body)
