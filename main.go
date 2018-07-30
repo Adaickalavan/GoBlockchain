@@ -3,6 +3,9 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -24,14 +27,24 @@ type Block struct {
 // Blockchain represents the sequence of blocks forming a blockchain
 var Blockchain []Block
 
+// Message represents the new data being added to the new block in a blockchain
+type Message struct {
+	BPM int
+}
+
+func genesis() {
+	t := time.Now()
+	genesisBlock := Block{Index: 0, Timestamp: t.String(), BPM: 0, Hash: "", PrevHash: ""}
+	Blockchain = append(Blockchain, genesisBlock)
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal(err)
 	}
-
-	run()
-
+	genesis()
+	log.Fatal(run())
 }
 
 func calculateHash(block Block) string {
@@ -42,15 +55,16 @@ func calculateHash(block Block) string {
 	return hex.EncodeToString(hashed)
 }
 
-func generateBlock(oldBlock Block, BPM int) (Block, error) {
+func generateBlock(oldBlock Block, BPM int) Block {
 	var newBlock Block
 	t := time.Now()
 	newBlock.Index = oldBlock.Index + 1
 	newBlock.Timestamp = t.String()
+	newBlock.BPM = BPM
 	newBlock.PrevHash = oldBlock.Hash
 	newBlock.Hash = calculateHash(newBlock)
 
-	return newBlock, nil
+	return newBlock
 }
 
 func isBlockValid(newBlock, oldBlock Block) bool {
@@ -65,16 +79,10 @@ func isBlockValid(newBlock, oldBlock Block) bool {
 	return true
 }
 
-func replaceChain(newBlocks []Block) {
-	if len(newBlocks) > len(Blockchain) {
-		Blockchain = newBlocks
-	}
-}
-
 func makeMuxRouter() http.Handler {
 	muxRouter := mux.NewRouter()
-	// muxRouter.HandleFunc("/", handleGetBlockchain).Methods("GET")
-	// muxRouter.HandleFunc("/", handleWriteBlock).Methods("POST")
+	muxRouter.HandleFunc("/", handleGetBlockchain).Methods("GET")
+	muxRouter.HandleFunc("/", handleWriteBlock).Methods("POST")
 	return muxRouter
 }
 
@@ -96,10 +104,44 @@ func run() error {
 	return nil
 }
 
-func handleGetBlockChain(w http.ResponseWriter, r *http.Request) {
-
+func handleGetBlockchain(w http.ResponseWriter, r *http.Request) {
+	bytes, err := json.MarshalIndent(Blockchain, "", "  ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	io.WriteString(w, string(bytes))
 }
 
 func handleWriteBlock(w http.ResponseWriter, r *http.Request) {
-	
+	var m Message
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&m); err == nil {
+		fmt.Println("DANGER INSIDE DECODE REWEROROR")
+		respondWithJSON(w, r, http.StatusBadRequest, r.Body)
+		return
+	}
+	defer r.Body.Close()
+
+	oldBlock := Blockchain[len(Blockchain)-1]
+	newBlock := generateBlock(oldBlock, m.BPM)
+
+	if isBlockValid(newBlock, oldBlock) {
+		Blockchain = append(Blockchain, newBlock)
+	}
+
+	respondWithJSON(w, r, http.StatusCreated, newBlock)
+}
+
+func respondWithJSON(w http.ResponseWriter, r *http.Request, code int, payload interface{}) {
+	response, err := json.MarshalIndent(payload, "", " ")
+	if err != nil {
+		http.Error(w, "HTTP 500: Internal Server Error", http.StatusInternalServerError)
+		// w.WriteHeader(http.StatusInternalServerError)
+		// w.Write([]byte("HTTP 500: Internal Server Error"))
+		return
+	}
+	w.WriteHeader(code)
+	w.Write(response)
 }
