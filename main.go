@@ -39,7 +39,6 @@ func main() {
 	}
 
 	run()
-
 }
 
 func calculateHash(block Block) string {
